@@ -6,7 +6,8 @@ setup(
     py_modules=['main'],
     install_requires=[
         'Click',
-        'boto3'
+        'boto3',
+        'requests'
     ],
     entry_points='''
         [console_scripts]
