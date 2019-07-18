@@ -37,11 +37,16 @@ class CoachApi:
             Prefix='data/',
             FetchOwner=False
         )
-        for prefix in response['CommonPrefixes']:
-            name = prefix['Prefix'].lstrip('data').strip('/').strip('\\')
-            results.append(name)
-        
-        return results
+
+        commonPrefixes = 'CommonPrefixes'
+
+        if commonPrefixes in response:
+            for prefix in response[commonPrefixes]:
+                name = prefix['Prefix'].lstrip('data').strip('/').strip('\\')
+                results.append(name)
+            return results
+        else:
+            return []
 
     def train(self, name, steps, module):
         url = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com/latest/new-job'
