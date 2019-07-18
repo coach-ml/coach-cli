@@ -76,7 +76,8 @@ def sync(dir):
 @click.command()
 def ls():
     coach = get_coach()
-    print(coach.list_objects())
+    for obj in coach.list_objects():
+        click.echo(obj)
 
 @click.command()
 @click.option("--model", type=str)
