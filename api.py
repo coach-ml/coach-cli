@@ -1,7 +1,7 @@
 import boto3
 import os
 import requests
-from coach.coach import Coach
+from coach import Coach
 
 
 class CoachApi:
