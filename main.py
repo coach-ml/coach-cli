@@ -114,8 +114,14 @@ def status(model):
 @click.argument("model", type=str)
 @click.option("--path", type=str, default=model_folder)
 def cache(model, path):
-    coach = get_coach()
-    coach.download(model, path)
+    if path == model_folder and not os.path.isdir(path):
+        os.mkdir(path)
+
+    try:
+        coach = get_coach()
+        coach.cache(model, path)
+    except ValueError err:
+        print(err)
 
 @click.command()
 @click.argument("image", type=str)

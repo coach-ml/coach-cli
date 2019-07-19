@@ -42,7 +42,7 @@ class CoachApi:
 
         if commonPrefixes in response:
             for prefix in response[commonPrefixes]:
-                name = prefix['Prefix'].lstrip('data/').rstrip('/').rstrip('\\')
+                name = prefix['Prefix'].lstrip('data').strip('/').strip('\\')
                 results.append(name)
             return results
         else:
@@ -98,12 +98,9 @@ class CoachApi:
             return result
 
 
-    def download(self, name, path):
-        if not os.path.isdir(path):
-            os.mkdir(path)
-
+    def cache(self, model, path):
         coach = CoachClient().login(self.api)
-        coach.cache_model(name, path)
+        coach.cache_model(model, path)
 
     def predict(self, image, path):
         coach = CoachClient()
