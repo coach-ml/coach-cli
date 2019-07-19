@@ -20,10 +20,14 @@ def get_coach():
     return CoachApi(creds['api'], creds['key'], creds['secret'], creds['id'], creds['bucket'])
 
 @click.command()
-@click.option("--api", type=str, prompt="API Key", help="API Key")
-@click.option("--key", type=str, prompt="Key ID", help="Key ID")
-@click.option("--secret", type=str, prompt="Key Secret", help="Key Secret")
+@click.option("--api", type=str, prompt="API Key", help="API Key", hide_input=True)
+@click.option("--key", type=str, prompt="Storage Key", help="Storage Key", hide_input=True)
+@click.option("--secret", type=str, prompt="Storage Key Secret", help="Storage Key Secret", hide_input=True)
 def login(api, key, secret):
+    """
+    Authenticates with Coach.
+    Get your API key here: https://coach.lkuich.com/
+    """
     def get_profile():
         id = api[0:5]
         url = 'https://2hhn1oxz51.execute-api.us-east-1.amazonaws.com/prod/' + id
@@ -40,7 +44,7 @@ def login(api, key, secret):
         os.mkdir(config_folder)
 
     creds = os.path.join(config_folder, 'creds.json')
-    click.echo(f"Storing creds in: {creds}")
+    click.echo(f"Storing credentials in: {creds}")
     
     with open(creds, 'w') as creds_file:
         content = {
@@ -54,10 +58,21 @@ def login(api, key, secret):
         creds_file.close()
 
 @click.command()
-@click.argument("model")
-@click.argument("steps", type=int)
-@click.option("--module", type=str, default="mobilenet_v2_100_224", prompt="Which module would you like to use as a base?")
+@click.argument("model", type=str)
+@click.option("--steps", type=int, default=500, help="Number of training steps")
+@click.option("--module", type=click.Choice(
+    [
+        'mobilenet_v2_035_128', 'mobilenet_v2_050_128', 'mobilenet_v2_075_128', 'mobilenet_v2_100_128',
+        'mobilenet_v2_035_224', 'mobilenet_v2_050_224', 'mobilenet_v2_075_224', 'mobilenet_v2_100_224', 'mobilenet_v2_130_224', 'mobilenet_v2_140_224'
+    ]
+), default="mobilenet_v2_100_224", help="Module to use as transfer learning base")
 def train(model, steps, module):
+    """
+    Starts a Coach training session.
+
+    You can specify a base module for transfer learning. This will impact the size and accuracy of your model.
+    You may also want to adjust the number of training steps to account for under/overfitting
+    """
     click.confirm(f'Are you sure you want to train {model} for {str(steps)} steps?', abort=True)
 
     try:
@@ -70,6 +85,7 @@ def train(model, steps, module):
 @click.command()
 @click.argument('model', type=str)
 def rm(model):
+    """Deletes synced training data."""
     click.confirm(f"You're about to delete the training data for {model}, are you sure you want to continue?", abort=True)
 
     try:
@@ -81,7 +97,18 @@ def rm(model):
 
 @click.command()
 @click.argument("path")
+def new(path):
+    """
+    Alias for sync command.
+
+    Syncs a local data directory with Coach.
+    """
+    sync(path)
+
+@click.command()
+@click.argument("path")
 def sync(path):
+    """Syncs a local data directory with Coach."""
     path = path.rstrip('\\').rstrip('/')
     click.confirm(f'Are you sure you want to sync {path}?', abort=True)
     
@@ -93,6 +120,7 @@ def sync(path):
 
 @click.command()
 def ls():
+    """Lists synced projects in Coach."""
     try:
         coach = get_coach()
         for obj in coach.list_objects():
@@ -101,33 +129,45 @@ def ls():
         print(f"Unable to list {prefix}")
 
 @click.command()
-@click.option("--model", type=str)
+@click.option("--model", type=str, help="Trained model name")
 def status(model):
+    """Retreives the status of models."""
     try:
         coach = get_coach()
         status = coach.status(model)
+        print('-----------------------------------------------------')
         print(status)
+        print('-----------------------------------------------------')
     except ValueError as err:
         print(err)
 
 @click.command()
 @click.argument("model", type=str)
-@click.option("--path", type=str, default=model_folder)
+@click.option("--path", type=str, default=model_folder, help="Folder to store cached model")
 def cache(model, path):
+    """Caches a model locally."""
     if path == model_folder and not os.path.isdir(path):
         os.mkdir(path)
 
     try:
         coach = get_coach()
         coach.cache(model, path)
-    except ValueError err:
+    except ValueError as err:
         print(err)
 
 @click.command()
 @click.argument("image", type=str)
 @click.argument("model_name", type=str)
-@click.option("--root", type=str, default=model_folder)
+@click.option("--root", type=str, default=model_folder, help="Path containing model directories")
 def predict(image, model_name, root):
+    """
+    Locally runs model prediction on specified image.
+
+    Models must already be cached. See cache command for usage.
+    For example:
+    coach cache flowers
+    coach predict rose.jpg flowers
+    """
     try:
         model_path = os.path.join(root, model_name)    
         coach = get_coach()
@@ -137,10 +177,19 @@ def predict(image, model_name, root):
 
 @click.group()
 def cli():
+    """
+    💖 Welcome to the Coach CLI Utility! 💖
+
+    Grab your API keys and view example usage at:
+    https://coach.lkuich.com
+
+    Happy training! ⚽
+    """
     pass
 
 cli.add_command(train)
 cli.add_command(login)
+cli.add_command(new)
 cli.add_command(sync)
 cli.add_command(ls)
 cli.add_command(rm)
