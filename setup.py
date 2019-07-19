@@ -10,7 +10,8 @@ setuptools.setup(
     install_requires=[
         'Click',
         'boto3',
-        'requests'
+        'requests',
+        'coach-ml'
     ],
     entry_points='''
         [console_scripts]
@@ -23,7 +24,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://coach.lkuich.com",
     packages=setuptools.find_packages(),
-    install_requires=['requests', 'coach-ml'],
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: MIT License",
