@@ -3,3 +3,4 @@ Click
 requests
 numpy
 tensorflow==1.12
+coach-ml

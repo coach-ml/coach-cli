@@ -54,49 +54,80 @@ def login(api, key, secret):
         creds_file.close()
 
 @click.command()
-@click.argument("images")
+@click.argument("model")
 @click.argument("steps", type=int)
 @click.option("--module", type=str, default="mobilenet_v2_100_224", prompt="Which module would you like to use as a base?")
-def train(images, steps, module):
-    name = os.path.split(images)[1]
-    click.confirm(f'Are you sure you want to train {name} for {str(steps)} steps?', abort=True)
+def train(model, steps, module):
+    click.confirm(f'Are you sure you want to train {model} for {str(steps)} steps?', abort=True)
 
-    coach = get_coach()
-    coach.train(name, steps, module)
-    
-    click.echo(f"Training {name} for {str(steps)} steps...")
+    try:
+        coach = get_coach()
+        coach.train(model, steps, module)
+        click.echo(f"Training {model} for {str(steps)} steps...")
+    except Exception:
+        print(f"Failed to train {model}")
 
 @click.command()
-@click.argument("dir")
-def sync(dir):
-    coach = get_coach()
-    click.confirm(f'Are you sure you want to sync {dir}?', abort=True)
-    coach.upload_directory(dir)
+@click.argument('model', type=str)
+def rm(model):
+    click.confirm(f"You're about to delete the training data for {model}, are you sure you want to continue?", abort=True)
+
+    try:
+        coach = get_coach()
+        coach.rm(model)
+        click.echo(f"Deleted {model}")
+    except Exception:
+        print(f"Failed to delete {model}")
+
+@click.command()
+@click.argument("path")
+def sync(path):
+    path = path.rstrip('\\').rstrip('/')
+    click.confirm(f'Are you sure you want to sync {path}?', abort=True)
+    
+    try:
+        coach = get_coach()
+        coach.upload_directory(path)
+    except Exception:
+        print(f"Failed to sync {path}")
 
 @click.command()
 def ls():
-    coach = get_coach()
-    for obj in coach.list_objects():
-        click.echo(obj)
+    try:
+        coach = get_coach()
+        for obj in coach.list_objects():
+            click.echo(obj)
+    except Exception:
+        print(f"Unable to list {prefix}")
 
 @click.command()
 @click.option("--model", type=str)
 def status(model):
-    pass
+    try:
+        coach = get_coach()
+        status = coach.status(model)
+        print(status)
+    except ValueError as err:
+        print(err)
 
 @click.command()
 @click.argument("model", type=str)
 @click.option("--path", type=str, default=model_folder)
-@click.option('--version', type=int, default=0)
-def cache(model, path, version):
+def cache(model, path):
     coach = get_coach()
-    coach.download(model, path, version)
+    coach.download(model, path)
 
 @click.command()
-@click.argument("model", type=str)
 @click.argument("image", type=str)
-def predict(model, image):
-    pass
+@click.argument("model_name", type=str)
+@click.option("--root", type=str, default=model_folder)
+def predict(image, model_name, root):
+    try:
+        model_path = os.path.join(root, model_name)    
+        coach = get_coach()
+        coach.predict(image, model_path)
+    except ValueError as err:
+        print(err)
 
 @click.group()
 def cli():
@@ -106,6 +137,7 @@ cli.add_command(train)
 cli.add_command(login)
 cli.add_command(sync)
 cli.add_command(ls)
+cli.add_command(rm)
 cli.add_command(status)
 cli.add_command(cache)
 cli.add_command(predict)
