@@ -79,6 +79,13 @@ class CoachApi:
             if not name in status:
                 raise ValueError(f'No model named {name} exists')
             
+            if name not in status:
+                return None
+            elif 'currentStatus' not in status[name]:
+                return None
+            elif 'Status' not in status[name]['currentStatus']:
+                return None
+
             status = status[name]['currentStatus']
             status_message = status['Status']
             
@@ -97,9 +104,11 @@ class CoachApi:
             result = ''
             keys = status.keys()
             for i, model in enumerate(keys, start=1):
-                result += pretty_print(status, model)
-                if i < len(keys):
-                    result += '\n'
+                r = pretty_print(status, model)
+                if r is not None:
+                    result += r
+                    if i < len(keys):
+                        result += '\n'
             return result
 
 
