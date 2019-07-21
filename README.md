@@ -1,4 +1,4 @@
-# Coach CLI Utility
+# Coach CLI
 
 This utility is responsible for managing user interaction with Coach's services.
 
