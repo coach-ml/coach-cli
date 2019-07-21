@@ -36,7 +36,7 @@ class CoachApi:
 
 
         if download:
-            
+            pass
         else:
             # Delete everything remotely
             click.echo("Pruning remote...")
