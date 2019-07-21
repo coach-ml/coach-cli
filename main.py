@@ -30,23 +30,27 @@ class CoachApi:
         else:
             return False
 
-    def sync_directory(self, path):
+    def sync_directory(self, path, download=False):
         bucket = self.s3.Bucket(self.bucket)
         root = os.path.split(path)[1]
 
-        # Delete everything remotely
-        click.echo("Pruning remote...")
-        self.rm(root)
 
-        # Upload everything we have locally
-        for subdir, dirs, files in os.walk(path):
-            subdir_path = os.path.split(subdir)
-            if subdir_path[0] != '':
-                click.echo(f"Syncing {subdir_path[1]}...")
-            for file in files:
-                full_path = os.path.join(subdir, file)
-                with open(full_path, 'rb') as data:
-                    bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
+        if download:
+            
+        else:
+            # Delete everything remotely
+            click.echo("Pruning remote...")
+            self.rm(root)
+
+            # Upload everything we have locally
+            for subdir, dirs, files in os.walk(path):
+                subdir_path = os.path.split(subdir)
+                if subdir_path[0] != '':
+                    click.echo(f"Syncing {subdir_path[1]}...")
+                for file in files:
+                    full_path = os.path.join(subdir, file)
+                    with open(full_path, 'rb') as data:
+                        bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
 
     def list_objects(self):
         results = []
@@ -212,7 +216,7 @@ def train(model, steps, module):
         coach.train(model, steps, module)
         click.echo(f"Training {model} for {str(steps)} steps...")
     except Exception as e:
-        print(e)
+        click.echo(e)
 
 @click.command()
 @click.argument('model', type=str)
@@ -225,7 +229,7 @@ def rm(model):
         coach.rm(model)
         click.echo(f"Deleted {model}")
     except Exception:
-        print(f"Failed to delete {model}")
+        click.echo(f"Failed to delete {model}")
 
 @click.command()
 @click.argument("path")
@@ -239,16 +243,25 @@ def new(path):
 
 @click.command()
 @click.argument("path")
-def sync(path):
-    """Syncs a local data directory with Coach."""
+@click.option("--download", default=False, help="Downloads data from Coach to local directory")
+def sync(path, download):
+    """
+    Syncs a local data directory with Coach.
+
+    The default operation is to upload local contents, remote data will be deleted if it is no longer presently.
+    The --download flag will download remote contents locally.
+    """
     path = path.rstrip('\\').rstrip('/')
-    #click.confirm(f'Are you sure you want to sync {path}?', abort=True)
+    if download:
+        click.confirm(f'This will REPLACE local data with remote data\nAre you sure you want to sync {path}?', abort=True)
+    else:
+        click.confirm(f'This will DELETE remote data that is not present\Are you sure you want to sync {path}?', abort=True)
     
-    #try:
-    coach = get_coach()
-    coach.sync_directory(path)
-    #except Exception:
-    #    print(f"Failed to sync {path}")
+    try:
+        coach = get_coach()
+        coach.sync_directory(path, download)
+    except Exception:
+        click.echo(f"Failed to sync {path}")
 
 @click.command()
 def ls():
@@ -258,7 +271,7 @@ def ls():
         for obj in coach.list_objects():
             click.echo(obj)
     except Exception:
-        print(f"Unable to list {prefix}")
+        click.echo(f"Unable to list {prefix}")
 
 @click.command()
 @click.option("--model", type=str, help="Trained model name")
@@ -267,11 +280,11 @@ def status(model):
     try:
         coach = get_coach()
         status = coach.status(model)
-        print('-----------------------------------------------------')
-        print(status)
-        print('-----------------------------------------------------')
+        click.echo('-----------------------------------------------------')
+        click.echo(status)
+        click.echo('-----------------------------------------------------')
     except ValueError as err:
-        print(err)
+        click.echo(err)
 
 @click.command()
 @click.argument("model", type=str)
@@ -285,7 +298,7 @@ def cache(model, path):
         coach = get_coach()
         coach.cache(model, path)
     except ValueError as err:
-        print(err)
+        click.echo(err)
 
 @click.command()
 @click.argument("image", type=str)
@@ -305,7 +318,7 @@ def predict(image, model_name, root):
         coach = get_coach()
         coach.predict(image, model_path)
     except ValueError as err:
-        print(err)
+        click.echo(err)
 
 @click.group()
 def cli():
