@@ -22,11 +22,27 @@ class CoachApi:
         )
         self.s3 = session.resource('s3')
 
+    def object_exists(self, key):
+        bucket = self.s3.Bucket(self.bucket)
+        objs = list(bucket.objects.filter(Prefix=key))
+        if len(objs) > 0 and objs[0].key == key:
+            return True
+        else:
+            return False
+
     def sync_directory(self, path):
         bucket = self.s3.Bucket(self.bucket)
         root = os.path.split(path)[1]
 
+        # Delete everything remotely
+        click.echo("Pruning remote...")
+        self.rm(root)
+
+        # Upload everything we have locally
         for subdir, dirs, files in os.walk(path):
+            subdir_path = os.path.split(subdir)
+            if subdir_path[0] != '':
+                click.echo(f"Syncing {subdir_path[1]}...")
             for file in files:
                 full_path = os.path.join(subdir, file)
                 with open(full_path, 'rb') as data:
@@ -226,13 +242,13 @@ def new(path):
 def sync(path):
     """Syncs a local data directory with Coach."""
     path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'Are you sure you want to sync {path}?', abort=True)
+    #click.confirm(f'Are you sure you want to sync {path}?', abort=True)
     
-    try:
-        coach = get_coach()
-        coach.sync_directory(path)
-    except Exception:
-        print(f"Failed to sync {path}")
+    #try:
+    coach = get_coach()
+    coach.sync_directory(path)
+    #except Exception:
+    #    print(f"Failed to sync {path}")
 
 @click.command()
 def ls():
