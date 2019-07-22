@@ -22,6 +22,9 @@ class CoachApi:
         )
         self.s3 = session.resource('s3')
 
+    def list_objects(self, key):
+        pass
+
     def object_exists(self, key):
         bucket = self.s3.Bucket(self.bucket)
         objs = list(bucket.objects.filter(Prefix=key))
@@ -30,27 +33,55 @@ class CoachApi:
         else:
             return False
 
-    def sync_directory(self, path, download=False):
+    def sync_local(self, path):
+        model = os.path.split(path)[1]
         bucket = self.s3.Bucket(self.bucket)
-        root = os.path.split(path)[1]
 
+        # Upload everything we have locally
+        walk = os.walk(path)
+        local_categories = next(walk)[1]
 
-        if download:
-            pass
-        else:
-            # Delete everything remotely
-            click.echo("Pruning remote...")
-            self.rm(root)
+        if len(local_categories) <= 0:
+            raise ValueError("Invalid directory structure, no category subdirectories")
 
-            # Upload everything we have locally
-            for subdir, dirs, files in os.walk(path):
-                subdir_path = os.path.split(subdir)
-                if subdir_path[0] != '':
-                    click.echo(f"Syncing {subdir_path[1]}...")
-                for file in files:
-                    full_path = os.path.join(subdir, file)
-                    with open(full_path, 'rb') as data:
-                        bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
+        def get_categories(model):
+            key = f'data/{model}/'
+            client = self.s3.meta.client
+            result = client.list_objects_v2(Bucket=bucket_name, Prefix=key, Delimiter='/')
+            return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in result.get('CommonPrefixes')]
+
+        def get_category_files(model, category):
+            key = f'data/{model}/{category}'
+            bucket = self.s3.Bucket(bucket_name)
+            result = list(bucket.objects.filter(Prefix=key))    
+            return [os.path.split(o.key)[1] for o in result]
+
+        # Delete remote categories if they don't exist locally
+        remote_categories = get_categories(model)
+        for category in remote_categories:
+            if category not in local_categories:
+                self.rm(model, category)
+
+        # Iterate through our local categories, check for consistency with remote
+        for category in local_categories:
+            click.echo(f"Syncing {category}...")
+
+            category_walk = os.walk(os.path.join(path, category))
+            category_subs = next(category_walk)[1] # Get subdirectories in our cats
+            if len(category_subs) > 0:
+                click.echo("W: Directories in categories will be ignored")
+
+            local_files = [files for root, dirs, files in os.walk(os.path.join(path, category))][0]
+            remote_files = get_category_files(model, category)
+
+            for remote_file in remote_files:
+                if remote_file not in local_files:
+                    self.rm(model, category, remote_file)
+
+            for local_file in local_files:
+                if local_file not in remote_files:
+                    with open(os.path.join(path, category, local_file), 'rb') as data:
+                        bucket.put_object(Key=f'data/{model}/{category}/{local_file}', Body=data)
 
     def list_objects(self):
         results = []
@@ -73,9 +104,15 @@ class CoachApi:
         else:
             return []
 
-    def rm(self, model):
-        bucket = self.s3.Bucket(self.bucket)
-        bucket.objects.filter(Prefix=f"data/{model}/").delete()
+    def rm(self, model, category=None, file=None):
+        prefix = f"data/{model}/"
+        if category != None:
+            prefix += category + '/'
+            if file != None:
+                prefix += file
+
+        bucket = self.s3.Bucket(bucket_name)
+        bucket.objects.filter(Prefix=prefix).delete()
 
     def train(self, model, steps, module):
         try:
@@ -243,23 +280,18 @@ def new(path):
 
 @click.command()
 @click.argument("path")
-@click.option("--download", default=False, help="Downloads data from Coach to local directory")
-def sync(path, download):
+def sync(path):
     """
     Syncs a local data directory with Coach.
 
-    The default operation is to upload local contents, remote data will be deleted if it is no longer presently.
-    The --download flag will download remote contents locally.
+    The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
     """
     path = path.rstrip('\\').rstrip('/')
-    if download:
-        click.confirm(f'This will REPLACE local data with remote data\nAre you sure you want to sync {path}?', abort=True)
-    else:
-        click.confirm(f'This will DELETE remote data that is not present\Are you sure you want to sync {path}?', abort=True)
+    click.confirm(f'This will DELETE remote data that is not present.\Are you sure you want to sync {path}?', abort=True)
     
     try:
         coach = get_coach()
-        coach.sync_directory(path, download)
+        coach.sync_local(path)
     except Exception:
         click.echo(f"Failed to sync {path}")
 
