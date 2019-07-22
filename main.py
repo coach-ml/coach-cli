@@ -298,8 +298,6 @@ def rm(model):
 def new(path):
     """
     Uploads your local training directory to Coach.
-
-    The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
     """
     path = path.rstrip('\\').rstrip('/')
     click.confirm(f'Are you sure you want to upload {path}?', abort=True)

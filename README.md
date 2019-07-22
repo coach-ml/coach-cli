@@ -43,7 +43,7 @@ Commands:
   cache    Caches a model locally.
   login    Authenticates with Coach.
   ls       Lists synced projects in Coach.
-  new      Alias for sync command.
+  new      Uploads your local training directory to Coach.
   predict  Locally runs model prediction on specified image.
   rm       Deletes synced training data.
   status   Retreives the status of models.
