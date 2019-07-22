@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="coach-cli",
-    version='0.03',
+    version='0.04',
     py_modules=['main'],
     install_requires=[
         'Click',
