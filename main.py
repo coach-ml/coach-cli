@@ -376,9 +376,15 @@ def predict(image, model_name, root):
     coach predict rose.jpg flowers
     """
     try:
-        model_path = os.path.join(root, model_name)    
         coach = get_coach()
-        coach.predict(image, model_path)
+        model_path = os.path.join(root, model_name)    
+
+        if not os.path.exists(model_path):
+            click.echo(f"Caching {model_name} model...")
+            coach.cache(model_name, root)
+        
+        result = coach.predict(image, model_path)
+        click.echo(result)
     except ValueError as err:
         click.echo(err)
 
