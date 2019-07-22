@@ -87,9 +87,12 @@ Now we're going to upload our dataset to Coach
 
 ```bash
 coach new flowers
+```
 
-# If you make any changes to this data, simply run:
-# coach sync flowers
+Note, if you make changes to this dataset, like delete some samples, you can sync your local directory with Coach by running
+
+```bash
+coach sync flowers
 ```
 
 Now we're going to train. We must specify the name of our synced project, the number of training steps, and the base module to use for transfer learning.  

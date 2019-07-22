@@ -33,31 +33,56 @@ class CoachApi:
         else:
             return False
 
+    def __get_categories(self, model):
+        key = f'data/{model}/'
+        client = self.s3.meta.client
+        result = client.list_objects_v2(Bucket=bucket_name, Prefix=key, Delimiter='/')
+        return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in result.get('CommonPrefixes')]
+
+    
+    def __get_category_files(self, model, category):
+        key = f'data/{model}/{category}'
+        bucket = self.s3.Bucket(bucket_name)
+        result = list(bucket.objects.filter(Prefix=key))    
+        return [os.path.split(o.key)[1] for o in result]
+
+    def upload_local(self, path):
+        bucket = self.s3.Bucket(self.bucket)
+        root = os.path.split(path)[1]
+
+        remote_categories = self.__get_categories(model)
+        if len(remote_categories) > 0:
+            raise ValueError(f"{root} already exists. Did you mean to `coach sync {root}`?`")
+       
+        walk = os.walk(path)
+        local_categories = next(walk)[1]
+
+        if len(local_categories) <= 0:
+            raise ValueError("Invalid directory structure, no category subdirectories")
+        
+        # Upload everything we have locally      
+        for subdir, dirs, files in walk:
+            subdir_path = os.path.split(subdir)
+            if subdir_path[0] != '':
+                click.echo(f"Syncing {subdir_path[1]}...")
+            for file in files:
+                full_path = os.path.join(subdir, file)
+                with open(full_path, 'rb') as data:
+                    bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
+
+
     def sync_local(self, path):
         model = os.path.split(path)[1]
         bucket = self.s3.Bucket(self.bucket)
 
-        # Upload everything we have locally
         walk = os.walk(path)
         local_categories = next(walk)[1]
 
         if len(local_categories) <= 0:
             raise ValueError("Invalid directory structure, no category subdirectories")
 
-        def get_categories(model):
-            key = f'data/{model}/'
-            client = self.s3.meta.client
-            result = client.list_objects_v2(Bucket=bucket_name, Prefix=key, Delimiter='/')
-            return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in result.get('CommonPrefixes')]
-
-        def get_category_files(model, category):
-            key = f'data/{model}/{category}'
-            bucket = self.s3.Bucket(bucket_name)
-            result = list(bucket.objects.filter(Prefix=key))    
-            return [os.path.split(o.key)[1] for o in result]
-
         # Delete remote categories if they don't exist locally
-        remote_categories = get_categories(model)
+        remote_categories = self.__get_categories(model)
         for category in remote_categories:
             if category not in local_categories:
                 self.rm(model, category)
@@ -72,7 +97,7 @@ class CoachApi:
                 click.echo("W: Directories in categories will be ignored")
 
             local_files = [files for root, dirs, files in os.walk(os.path.join(path, category))][0]
-            remote_files = get_category_files(model, category)
+            remote_files = self.__get_category_files(model, category)
 
             for remote_file in remote_files:
                 if remote_file not in local_files:
@@ -272,11 +297,18 @@ def rm(model):
 @click.argument("path")
 def new(path):
     """
-    Alias for sync command.
+    Uploads your local training directory to Coach.
 
-    Syncs a local data directory with Coach.
+    The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
     """
-    sync(path)
+    path = path.rstrip('\\').rstrip('/')
+    click.confirm(f'Are you sure you want to upload {path}?', abort=True)
+    
+    try:
+        coach = get_coach()
+        coach.upload_local(path)
+    except Exception:
+        click.echo(f"Failed to sync {path}")
 
 @click.command()
 @click.argument("path")
