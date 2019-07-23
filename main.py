@@ -198,9 +198,11 @@ class CoachApi:
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
-    def predict(self, image, path):
-        coach = CoachClient()
-        model = coach.get_model(path)
+    def predict(self, image, model, path):
+        coach = CoachClient().login(self.api)
+        coach.cache_model(model, path)
+        
+        model = coach.get_model(os.path.join(path, model))
         return model.predict(image)
 
 config_folder = os.path.join(str(Path.home()), '.coach')
@@ -379,11 +381,7 @@ def predict(image, model_name, root):
         coach = get_coach()
         model_path = os.path.join(root, model_name)    
 
-        if not os.path.exists(model_path):
-            click.echo(f"Caching {model_name} model...")
-            coach.cache(model_name, root)
-        
-        result = coach.predict(image, model_path)
+        result = coach.predict(image, model_name, model_path)
         click.echo(result)
     except ValueError as err:
         click.echo(err)
