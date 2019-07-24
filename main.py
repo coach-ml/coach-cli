@@ -201,7 +201,7 @@ class CoachApi:
     def predict(self, image, model, path):
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
-        
+
         model = coach.get_model(os.path.join(path, model))
         return model.predict(image)
 
@@ -379,9 +379,7 @@ def predict(image, model_name, root):
     """
     try:
         coach = get_coach()
-        model_path = os.path.join(root, model_name)    
-
-        result = coach.predict(image, model_name, model_path)
+        result = coach.predict(image, model_name, root)
         click.echo(result)
     except ValueError as err:
         click.echo(err)
