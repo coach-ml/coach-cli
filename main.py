@@ -322,7 +322,7 @@ def sync(path):
     The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
     """
     path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'This will DELETE remote data that is not present.\Are you sure you want to sync {path}?', abort=True)
+    click.confirm(f'This will DELETE remote data that is not present.\nAre you sure you want to sync {path}?', abort=True)
     
     try:
         coach = get_coach()
