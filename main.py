@@ -37,7 +37,10 @@ class CoachApi:
         key = f'data/{model}/'
         client = self.s3.meta.client
         result = client.list_objects_v2(Bucket=bucket_name, Prefix=key, Delimiter='/')
-        return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in result.get('CommonPrefixes')]
+        common_prefixes = result.get('CommonPrefixes')
+        if common_prefixes is None:
+            return []
+        return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in common_prefixes]
 
     
     def __get_category_files(self, model, category):
