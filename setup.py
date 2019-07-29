@@ -1,11 +1,15 @@
 import setuptools
+import sys
+
+if sys.version_info <= (2, 7) or sys.version_info >= (3,7):
+    sys.exit('coach-cli requires Python 3 -> Python 3.6')
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="coach-cli",
-    version='0.7',
+    version='0.8',
     py_modules=['main'],
     install_requires=[
         'Click',
