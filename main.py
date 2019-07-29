@@ -259,7 +259,7 @@ def login(api, key, secret):
 
 @click.command()
 @click.argument("model", type=str)
-@click.option("--steps", type=int, default=500, help="Number of training steps")
+@click.option("--steps", type=int, default=5000, help="Number of training steps")
 @click.option("--module", type=click.Choice(
     [
         'mobilenet_v2_035_128', 'mobilenet_v2_050_128', 'mobilenet_v2_075_128', 'mobilenet_v2_100_128',
