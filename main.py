@@ -220,8 +220,6 @@ class CoachApi:
         coach.cache_model(model, path)
 
     def predict(self, image_or_directory, model, path):
-        result = []
-        
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
@@ -230,11 +228,9 @@ class CoachApi:
             for subdir, dirs, files in os.walk(image_or_directory):
                 subdir_path = os.path.split(subdir)
                 for file in files:
-                    result.append(model.predict(file))
+                    click.echo(model.predict(os.path.join(subdir, file)))
         else:
-            result.append(model.predict(image))
-
-        return result
+            click.echo(model.predict(image))
 
 config_folder = os.path.join(str(Path.home()), '.coach')
 model_folder = os.path.join(config_folder, 'models')
@@ -432,9 +428,7 @@ def predict(image_or_directory, model_name, root):
             os.mkdir(path)
 
         coach = get_coach()
-        results = coach.predict(image_or_directory, model_name, root)
-        for result in results:
-            click.echo(result)
+        coach.predict(image_or_directory, model_name, root)
     except ValueError as err:
         click.echo(err)
 
