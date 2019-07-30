@@ -219,12 +219,22 @@ class CoachApi:
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
-    def predict(self, image, model, path):
+    def predict(self, image_or_directory, model, path):
+        result = []
+        
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
         model = coach.get_model(os.path.join(path, model))
-        return model.predict(image)
+        if os.path.isdir(image_or_directory):
+            for subdir, dirs, files in os.walk(image_or_directory):
+                subdir_path = os.path.split(subdir)
+                for file in files:
+                    result.append(model.predict(file))
+        else:
+            result.append(model.predict(image))
+
+        return result
 
 config_folder = os.path.join(str(Path.home()), '.coach')
 model_folder = os.path.join(config_folder, 'models')
@@ -405,10 +415,10 @@ def cache(model, path):
         click.echo(err)
 
 @click.command()
-@click.argument("image", type=str)
+@click.argument("image_or_directory", type=str)
 @click.argument("model_name", type=str)
 @click.option("--root", type=str, default=model_folder, help="Path containing model directories")
-def predict(image, model_name, root):
+def predict(image_or_directory, model_name, root):
     """
     Locally runs model prediction on specified image.
 
@@ -418,9 +428,13 @@ def predict(image, model_name, root):
     coach predict rose.jpg flowers
     """
     try:
+        if root == model_folder and not os.path.isdir(root):
+            os.mkdir(path)
+
         coach = get_coach()
-        result = coach.predict(image, model_name, root)
-        click.echo(result)
+        results = coach.predict(image_or_directory, model_name, root)
+        for result in results:
+            click.echo(result)
     except ValueError as err:
         click.echo(err)
 
