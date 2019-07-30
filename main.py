@@ -230,7 +230,7 @@ class CoachApi:
                 for file in files:
                     click.echo(model.predict(os.path.join(subdir, file)))
         else:
-            click.echo(model.predict(image))
+            click.echo(model.predict(image_or_directory))
 
 config_folder = os.path.join(str(Path.home()), '.coach')
 model_folder = os.path.join(config_folder, 'models')
