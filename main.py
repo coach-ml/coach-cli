@@ -130,7 +130,8 @@ class CoachApi:
             return []
 
     def ls(self):
-        return [obj.lstrip(prefix).strip('/').strip('\\') for obj in self.list_objects(f'data/')]
+        prefix = 'data/'
+        return [obj.lstrip(prefix).strip('/').strip('\\') for obj in self.list_objects(prefix)]
 
 
     def rm(self, model, category=None, file=None):
