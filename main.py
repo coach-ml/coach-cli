@@ -22,9 +22,6 @@ class CoachApi:
         )
         self.s3 = session.resource('s3')
 
-    def list_objects(self, key):
-        pass
-
     def object_exists(self, key):
         bucket = self.s3.Bucket(self.bucket)
         objs = list(bucket.objects.filter(Prefix=key))
@@ -36,7 +33,7 @@ class CoachApi:
     def __get_categories(self, model):
         key = f'data/{model}/'
         client = self.s3.meta.client
-        result = client.list_objects_v2(Bucket=bucket_name, Prefix=key, Delimiter='/')
+        result = client.list_objects_v2(Bucket=self.bucket, Prefix=key, Delimiter='/')
         common_prefixes = result.get('CommonPrefixes')
         if common_prefixes is None:
             return []
@@ -45,7 +42,7 @@ class CoachApi:
     
     def __get_category_files(self, model, category):
         key = f'data/{model}/{category}'
-        bucket = self.s3.Bucket(bucket_name)
+        bucket = self.s3.Bucket(self.bucket)
         result = list(bucket.objects.filter(Prefix=key))    
         return [os.path.split(o.key)[1] for o in result]
 
@@ -111,14 +108,14 @@ class CoachApi:
                     with open(os.path.join(path, category, local_file), 'rb') as data:
                         bucket.put_object(Key=f'data/{model}/{category}/{local_file}', Body=data)
 
-    def list_objects(self):
+    def list_objects(self, prefix):
         results = []
         response = self.s3.meta.client.list_objects_v2(
             Bucket=self.bucket,
             Delimiter='/',
             EncodingType='url',
             MaxKeys=100,
-            Prefix='data/',
+            Prefix=prefix,
             FetchOwner=False
         )
 
@@ -126,11 +123,16 @@ class CoachApi:
 
         if commonPrefixes in response:
             for prefix in response[commonPrefixes]:
-                name = prefix['Prefix'].lstrip('data').strip('/').strip('\\')
+                name = prefix['Prefix']
                 results.append(name)
             return results
         else:
             return []
+
+    def ls(self):
+        prefix = 'data/'
+        return [obj.split(prefix, 1)[1].strip('/').strip('\\') for obj in self.list_objects(prefix)]
+
 
     def rm(self, model, category=None, file=None):
         prefix = f"data/{model}/"
@@ -139,8 +141,29 @@ class CoachApi:
             if file != None:
                 prefix += file
 
-        bucket = self.s3.Bucket(bucket_name)
+        bucket = self.s3.Bucket(self.bucket)
         bucket.objects.filter(Prefix=prefix).delete()
+
+    def download_remote(self, training_data, path):
+        prefix = f"data/{training_data}/"
+        bucket = self.s3.Bucket(self.bucket)
+
+        local_dir = os.path.join(path, training_data)
+        
+        for dir_prefix in self.list_objects(prefix):
+            if not os.path.exists(local_dir):
+                os.mkdir(local_dir)
+        
+            _dir = dir_prefix.split(prefix, 1)[1].strip('/')
+            os.mkdir(os.path.join(local_dir, _dir))
+
+            for file in bucket.objects.filter(Prefix=dir_prefix):
+                remote_filename = file.key
+                local_filename = remote_filename.split(prefix, 1)[1]
+
+                click.echo(f"{local_filename}")
+
+                bucket.download_file(remote_filename, os.path.join(path, training_data, local_filename))
 
     def train(self, model, steps, module):
         try:
@@ -201,12 +224,18 @@ class CoachApi:
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
-    def predict(self, image, model, path):
+    def predict(self, image_or_directory, model, path):
         coach = CoachClient().login(self.api)
         coach.cache_model(model, path)
 
         model = coach.get_model(os.path.join(path, model))
-        return model.predict(image)
+        if os.path.isdir(image_or_directory):
+            for subdir, dirs, files in os.walk(image_or_directory):
+                subdir_path = os.path.split(subdir)
+                for file in files:
+                    click.echo(model.predict(os.path.join(subdir, file)))
+        else:
+            click.echo(model.predict(image_or_directory))
 
 config_folder = os.path.join(str(Path.home()), '.coach')
 model_folder = os.path.join(config_folder, 'models')
@@ -295,11 +324,11 @@ def rm(model):
         coach = get_coach()
         coach.rm(model)
         click.echo(f"Deleted {model}")
-    except Exception:
-        click.echo(f"Failed to delete {model}")
+    except Exception as e:
+        click.echo(e)
 
 @click.command()
-@click.argument("path")
+@click.argument("path", type=str)
 def new(path):
     """
     Uploads your local training directory to Coach.
@@ -310,8 +339,27 @@ def new(path):
     try:
         coach = get_coach()
         coach.upload_local(path)
-    except Exception:
-        click.echo(f"Failed to sync {path}")
+    except Exception as e:
+        click.echo(e)
+
+@click.command()
+@click.argument("training_data")
+@click.option("--path", type=str, default=".")
+def download(training_data, path):
+    """
+    Downloads remote training data locally.
+
+    By default local data with the same name will be replaced.
+    """
+    path = path.rstrip('\\').rstrip('/')
+    click.confirm(f'This will OVERWRITE local data in {path}\nAre you sure you want to download {training_data}?', abort=True)
+    
+    try:
+        coach = get_coach()
+        coach.download_remote(training_data, path)
+    except Exception as e:
+        click.echo(e)
+
 
 @click.command()
 @click.argument("path")
@@ -327,18 +375,18 @@ def sync(path):
     try:
         coach = get_coach()
         coach.sync_local(path)
-    except Exception:
-        click.echo(f"Failed to sync {path}")
+    except Exception as e:
+        click.echo(e)
 
 @click.command()
 def ls():
     """Lists synced projects in Coach."""
     try:
         coach = get_coach()
-        for obj in coach.list_objects():
+        for obj in coach.ls():
             click.echo(obj)
-    except Exception:
-        click.echo(f"Unable to list {prefix}")
+    except Exception as e:
+        click.echo(e)
 
 @click.command()
 @click.option("--model", type=str, help="Trained model name")
@@ -368,10 +416,10 @@ def cache(model, path):
         click.echo(err)
 
 @click.command()
-@click.argument("image", type=str)
+@click.argument("image_or_directory", type=str)
 @click.argument("model_name", type=str)
 @click.option("--root", type=str, default=model_folder, help="Path containing model directories")
-def predict(image, model_name, root):
+def predict(image_or_directory, model_name, root):
     """
     Locally runs model prediction on specified image.
 
@@ -381,9 +429,11 @@ def predict(image, model_name, root):
     coach predict rose.jpg flowers
     """
     try:
+        if root == model_folder and not os.path.isdir(root):
+            os.mkdir(path)
+
         coach = get_coach()
-        result = coach.predict(image, model_name, root)
-        click.echo(result)
+        coach.predict(image_or_directory, model_name, root)
     except ValueError as err:
         click.echo(err)
 
@@ -404,6 +454,7 @@ cli.add_command(login)
 cli.add_command(new)
 cli.add_command(sync)
 cli.add_command(ls)
+cli.add_command(download)
 cli.add_command(rm)
 cli.add_command(status)
 cli.add_command(cache)
