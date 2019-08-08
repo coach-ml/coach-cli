@@ -161,7 +161,9 @@ class CoachApi:
                 remote_filename = file.key
                 local_filename = remote_filename.split(prefix, 1)[1]
 
-                bucket.download_file(remote_filename, local_filename)
+                click.echo(f"{local_filename}")
+
+                bucket.download_file(remote_filename, os.path.join(path, training_data, local_filename))
 
     def train(self, model, steps, module):
         try:
