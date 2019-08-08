@@ -131,7 +131,7 @@ class CoachApi:
 
     def ls(self):
         prefix = 'data/'
-        return [obj.lstrip(prefix).strip('/').strip('\\') for obj in self.list_objects(prefix)]
+        return [obj.split(prefix, 1)[1].strip('/').strip('\\') for obj in self.list_objects(prefix)]
 
 
     def rm(self, model, category=None, file=None):
@@ -148,18 +148,20 @@ class CoachApi:
         prefix = f"data/{training_data}/"
         bucket = self.s3.Bucket(self.bucket)
 
-        # List objects, and their children
-        for file in self.list_objects(prefix):
-            print(file)
-            '''
-            try:
-                bucket.download_file(prefix, 'my_local_image.jpg')
-            except botocore.exceptions.ClientError as e:
-                if e.response['Error']['Code'] == "404":
-                    print("The object does not exist.")
-                else:
-                    raise
-            '''
+        local_dir = os.path.join(path, training_data)
+        
+        for dir_prefix in self.list_objects(prefix):
+            if not os.path.exists(local_dir):
+                os.mkdir(local_dir)
+        
+            _dir = dir_prefix.split(prefix, 1)[1].strip('/')
+            os.mkdir(os.path.join(local_dir, _dir))
+
+            for file in bucket.objects.filter(Prefix=dir_prefix):
+                remote_filename = file.key
+                local_filename = filename.split(prefix, 1)[1]
+
+                bucket.download_file(remote_filename, local_filename)
 
     def train(self, model, steps, module):
         try:
@@ -348,7 +350,7 @@ def download(training_data, path):
     By default local data with the same name will be replaced.
     """
     path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'This will OVERWRITE local data in {path}.\nAre you sure you want to download {training_data}?', abort=True)
+    click.confirm(f'This will OVERWRITE local data in {path}\nAre you sure you want to download {training_data}?', abort=True)
     
     try:
         coach = get_coach()
