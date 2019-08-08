@@ -159,7 +159,7 @@ class CoachApi:
 
             for file in bucket.objects.filter(Prefix=dir_prefix):
                 remote_filename = file.key
-                local_filename = filename.split(prefix, 1)[1]
+                local_filename = remote_filename.split(prefix, 1)[1]
 
                 bucket.download_file(remote_filename, local_filename)
 
