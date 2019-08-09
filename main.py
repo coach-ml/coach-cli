@@ -428,9 +428,9 @@ def predict(image_or_directory, model_name, root):
     coach cache flowers
     coach predict rose.jpg flowers
     """
-    try:
+    try: 
         if root == model_folder and not os.path.isdir(root):
-            os.mkdir(path)
+            os.mkdir(model_folder)
 
         coach = get_coach()
         coach.predict(image_or_directory, model_name, root)
