@@ -40,15 +40,16 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  cache    Caches a model locally.
-  login    Authenticates with Coach.
-  ls       Lists synced projects in Coach.
-  new      Uploads your local training directory to Coach.
-  predict  Locally runs model prediction on specified image.
-  rm       Deletes synced training data.
-  status   Retreives the status of models.
-  sync     Syncs a local data directory with Coach.
-  train    Starts a Coach training session.
+  cache     Caches a model locally.
+  download  Downloads remote training data locally.  
+  login     Authenticates with Coach.
+  ls        Lists synced projects in Coach.
+  new       Uploads your local training directory to Coach.
+  predict   Locally runs model prediction on specified image.
+  rm        Deletes synced training data.
+  status    Retreives the status of models.
+  sync      Syncs a local data directory with Coach.
+  train     Starts a Coach training session.
 ```
 
 ## Examples

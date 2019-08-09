@@ -1,5 +1,5 @@
 #!/bin/bash
-rm -r build/ coach.egg-info/ dist/ lkuich.egg-info/
+rm -rf build/ coach.egg-info/ dist/ lkuich.egg-info/
 python3 setup.py sdist bdist_wheel
 
 if [ $1 = "prod" ]; then
