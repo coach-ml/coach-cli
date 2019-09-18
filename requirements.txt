@@ -1,6 +1,5 @@
 boto3
 Click
 requests
-numpy
-tensorflow==1.12
+tensorflow==1.14
 coach-ml

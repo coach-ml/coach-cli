@@ -1,10 +1,7 @@
-FROM python:3.6.9
+FROM python:3.7
 
 RUN mkdir /app
 WORKDIR /app
-
-RUN apt-get update
-RUN apt-get install -y vim
 
 COPY main.py main.py
 COPY setup.py setup.py
