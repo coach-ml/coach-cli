@@ -70,6 +70,17 @@ class CoachApi:
                 with open(full_path, 'rb') as data:
                     bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
 
+    def sync_remote(self, path):
+        model = os.path.split(path)[1]
+        bucket = self.s3.Bucket(self.bucket)
+
+        # Get remote file tree
+        remote_categories = self.__get_categories(model)
+        for category in remote_categories:
+            remote_files = self.__get_category_files(model, category)
+
+            # Get local file tree
+            print(remote_files)
 
     def sync_local(self, path):
         model = os.path.split(path)[1]
@@ -171,7 +182,7 @@ class CoachApi:
             response = requests.get(url, params={ "name": model, "steps": steps, "module": module }, headers={"X-Api-Key": self.api})
             response.raise_for_status()
         except Exception:
-            raise ValueError("Failed to start training session, check your API key")
+            raise ValueError("Failed to start training session, check your model name")
 
         return response.json()
         
@@ -306,9 +317,14 @@ def train(model, steps, module):
     You may also want to adjust the number of training steps to account for under/overfitting
     """
     click.confirm(f'Are you sure you want to train {model} for {str(steps)} steps?', abort=True)
-
+    
     try:
         coach = get_coach()
+        
+        if os.path.exists(model):
+            if click.confirm(f'Do you want to sync {model} before training?'):
+                coach.sync_local(model)
+        
         coach.train(model, steps, module)
         click.echo(f"Training {model} for {str(steps)} steps...")
     except Exception as e:
@@ -363,20 +379,22 @@ def download(training_data, path):
 
 @click.command()
 @click.argument("path")
-def sync(path):
+@click.option('--local', type=bool)
+def sync(path, local):
     """
     Syncs a local data directory with Coach.
 
     The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
     """
     path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'This will DELETE remote data that is not present.\nAre you sure you want to sync {path}?', abort=True)
+    click.confirm(f'This will DELETE remote data that is not present locally.\nAre you sure you want to sync {path}?', abort=True)
     
     try:
         coach = get_coach()
         coach.sync_local(path)
     except Exception as e:
         click.echo(e)
+
 
 @click.command()
 def ls():
