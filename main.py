@@ -9,7 +9,7 @@ import boto3
 
 from coach import CoachClient
 
-__API__ = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com'
+__API__ = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com/latest'
 
 class CoachApi:
     def __init__(self, api, key, secret, id, bucket):
@@ -177,7 +177,7 @@ class CoachApi:
 
     def train(self, model, steps, module):
         try:
-            url = f'{__API__}/latest/new-job'
+            url = f'{__API__}/new-job'
             response = requests.get(url, params={ "name": model, "steps": steps, "module": module }, headers={"X-Api-Key": self.api})
             response.raise_for_status()
         except Exception:
@@ -197,7 +197,7 @@ class CoachApi:
         
     def status(self, name=None):
         try:
-            url = f'{__API__}/latest/status'
+            url = f'{__API__}/status'
             response = requests.get(url, headers={"X-Api-Key": self.api})
             response.raise_for_status()
         except Exception:
