@@ -9,6 +9,8 @@ import boto3
 
 from coach import CoachClient
 
+__API__ = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com'
+
 class CoachApi:
     def __init__(self, api, key, secret, id, bucket):
         self.api = api
@@ -47,12 +49,12 @@ class CoachApi:
         return [os.path.split(o.key)[1] for o in result]
 
     def upload_local(self, path):
+        model = os.path.split(path)[1]
         bucket = self.s3.Bucket(self.bucket)
-        root = os.path.split(path)[1]
 
         remote_categories = self.__get_categories(model)
         if len(remote_categories) > 0:
-            raise ValueError(f"{root} already exists. Did you mean to `coach sync {root}`?`")
+            raise ValueError(f"{model} already exists. Did you mean to `coach sync {model}`?`")
        
         walk = os.walk(path)
         local_categories = next(walk)[1]
@@ -68,7 +70,7 @@ class CoachApi:
             for file in files:
                 full_path = os.path.join(subdir, file)
                 with open(full_path, 'rb') as data:
-                    bucket.put_object(Key=f'data/{root}/' + full_path[len(path)+1:], Body=data)
+                    bucket.put_object(Key=f'data/{model}/' + full_path[len(path)+1:], Body=data)
 
 
     def sync_local(self, path):
@@ -135,14 +137,22 @@ class CoachApi:
 
 
     def rm(self, model, category=None, file=None):
-        prefix = f"data/{model}/"
-        if category != None:
-            prefix += category + '/'
-            if file != None:
-                prefix += file
-
         bucket = self.s3.Bucket(self.bucket)
-        bucket.objects.filter(Prefix=prefix).delete()
+
+        def delete(root):
+            prefix = f"{root}/{model}/"
+            if category != None:
+                prefix += category + '/'
+                if file != None:
+                    prefix += file
+
+            bucket.objects.filter(Prefix=prefix).delete()
+
+        delete('data')
+        delete('trained')
+
+        self.api_rm(model)
+        
 
     def download_remote(self, training_data, path):
         prefix = f"data/{training_data}/"
@@ -167,8 +177,18 @@ class CoachApi:
 
     def train(self, model, steps, module):
         try:
-            url = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com/latest/new-job'
+            url = f'{__API__}/latest/new-job'
             response = requests.get(url, params={ "name": model, "steps": steps, "module": module }, headers={"X-Api-Key": self.api})
+            response.raise_for_status()
+        except Exception:
+            raise ValueError("Failed to start training session, check your API key")
+
+        return response.json()
+
+    def api_rm(self, model_name):
+        try:
+            url = f'{__API__}/rm'
+            response = requests.get(url, params={ "name": model_name }, headers={"X-Api-Key": self.api})
             response.raise_for_status()
         except Exception:
             raise ValueError("Failed to start training session, check your API key")
@@ -177,7 +197,7 @@ class CoachApi:
         
     def status(self, name=None):
         try:
-            url = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com/latest/status'
+            url = f'{__API__}/latest/status'
             response = requests.get(url, headers={"X-Api-Key": self.api})
             response.raise_for_status()
         except Exception:
@@ -233,9 +253,11 @@ class CoachApi:
             for subdir, dirs, files in os.walk(image_or_directory):
                 subdir_path = os.path.split(subdir)
                 for file in files:
-                    click.echo(model.predict(os.path.join(subdir, file)))
+                    img = os.path.join(subdir, file)
+                    click.echo(f'{img}: {model.predict(img)}')
         else:
-            click.echo(model.predict(image_or_directory))
+            img = model.predict(image_or_directory)
+            click.echo(f'{image_or_directory}: {img}')
 
 config_folder = os.path.join(str(Path.home()), '.coach')
 model_folder = os.path.join(config_folder, 'models')
@@ -343,6 +365,24 @@ def new(path):
         click.echo(e)
 
 @click.command()
+@click.argument("path")
+def sync(path):
+    """
+    Syncs a local data directory with Coach.
+
+    The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
+    """
+    path = path.rstrip('\\').rstrip('/')
+    click.confirm(f'This will DELETE remote data that is not present.\nAre you sure you want to sync {path}?', abort=True)
+    
+    try:
+        coach = get_coach()
+        coach.sync_local(path)
+    except Exception as e:
+        click.echo(e)
+
+
+@click.command()
 @click.argument("training_data")
 @click.option("--path", type=str, default=".")
 def download(training_data, path):
@@ -360,23 +400,6 @@ def download(training_data, path):
     except Exception as e:
         click.echo(e)
 
-
-@click.command()
-@click.argument("path")
-def sync(path):
-    """
-    Syncs a local data directory with Coach.
-
-    The default operation is to upload local contents, remote data will be deleted if it is no longer present locally.
-    """
-    path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'This will DELETE remote data that is not present.\nAre you sure you want to sync {path}?', abort=True)
-    
-    try:
-        coach = get_coach()
-        coach.sync_local(path)
-    except Exception as e:
-        click.echo(e)
 
 @click.command()
 def ls():
