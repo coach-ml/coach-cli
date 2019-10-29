@@ -285,10 +285,17 @@ def login(api, key, secret):
     def get_profile():
         id = api[0:5]
         url = 'https://2hhn1oxz51.execute-api.us-east-1.amazonaws.com/prod/' + id
-        response = requests.get(url, headers={"X-Api-Key": api}).json()
+        try:
+            response = requests.get(url, headers={"X-Api-Key": api}).json()
+        except Exception:
+            click.echo("Failed to parse response, please try again")
+            return None
+
         return response
 
     profile = get_profile()
+    if profile is None:
+        return
 
     if 'id' not in profile:
         click.echo("Invalid API key, could not authenticate")
