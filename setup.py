@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="coach-cli",
-    version='0.94',
+    version='0.95',
     py_modules=['main'],
     install_requires=[
         'Click',
@@ -26,9 +26,6 @@ setuptools.setup(
     url="https://coach.lkuich.com",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",
