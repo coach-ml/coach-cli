@@ -97,11 +97,11 @@ coach sync flowers
 ```
 
 Now we're going to train. We must specify the name of our synced project, the number of training steps, and the base module to use for transfer learning.  
-It's typically best to start high with training steps. The default is `5000`, and will do fine for this example. We're going to use the default `mobilenet_v2_100_224` as our base model, since this gives us a decent tradeoff between final model size, speed, and quality. Make sure to consult the help docs to find our more about supported base modules and find the right fit for your model based on your needs.
+It's typically best to start high with training steps. The default is `1000`, and will do fine for this example. We're going to use the default `mobilenet_v2_100_224` as our base model, since this gives us a decent tradeoff between final model size, speed, and quality. Make sure to consult the help docs to find our more about supported base modules and find the right fit for your model based on your needs.
 
 ```bash
 coach train flowers
-# OR: coach train flowers --steps 5000 --module mobilenet_v2_100_224
+# OR: coach train flowers --steps 1000 --module mobilenet_v2_100_224
 ```
 
 This will start a new training session. You can monitor its progress with the `status` command, by default with no arguments it'll show the status of all models. Since we're just interested in our `flowers` model, well run with the `--model` parameter
