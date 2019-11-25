@@ -240,9 +240,9 @@ class CoachApi:
             return result
 
 
-    def cache(self, model, path):
+    def cache(self, model, path, model_type='frozen'):
         coach = CoachClient().login(self.api)
-        coach.cache_model(model, path)
+        coach.cache_model(model_name=model, path=path, skip_match=False, model_type=model_type)
 
     def predict(self, image_or_directory, model, path):
         coach = CoachClient().login(self.api)
@@ -434,14 +434,16 @@ def status(model):
 @click.command()
 @click.argument("model", type=str)
 @click.option("--path", type=str, default=model_folder, help="Folder to store cached model")
-def cache(model, path):
+@click.option("--model_type", type=str, default='frozen', help="Type of model to cache. Can be one of:\nfrozen\nunity\nmobile")
+def cache(model, path, model_type):
     """Caches a model locally."""
     if path == model_folder and not os.path.isdir(path):
         os.mkdir(path)
 
     try:
         coach = get_coach()
-        coach.cache(model, path)
+        coach.cache(model, path, model_type)
+        click.echo(f'Cached {model_type} model to {path}')
     except ValueError as err:
         click.echo(err)
 
