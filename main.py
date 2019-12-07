@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import os
 import requests
+import setup
 
 from datetime import datetime
 import boto3
@@ -471,8 +472,8 @@ def predict(image_or_directory, model_name, root):
 
 @click.group()
 def cli():
-    """
-    💖 Welcome to the Coach CLI Utility! 💖
+    f"""
+    💖 Welcome to the Coach CLI Utility v{setup.version}! 💖
 
     Grab your API keys and view example usage at:
     https://coach.lkuich.com
