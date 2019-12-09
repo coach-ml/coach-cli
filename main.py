@@ -3,12 +3,11 @@ import json
 from pathlib import Path
 import os
 import requests
-import setup
 
 from datetime import datetime
 import boto3
 
-from coach import CoachClient
+from coach import *
 
 __API__ = 'https://9fqai4xymb.execute-api.us-east-1.amazonaws.com/latest'
 
@@ -283,23 +282,18 @@ def login(api, key, secret):
     Authenticates with Coach.
     Get your API key here: https://coach.lkuich.com/
     """
-    def get_profile():
+    try:
         id = api[0:5]
-        url = 'https://2hhn1oxz51.execute-api.us-east-1.amazonaws.com/prod/' + id
-        try:
-            response = requests.get(url, headers={"X-Api-Key": api}).json()
-        except Exception:
-            click.echo("Failed to parse response, please try again")
-            return None
+        profile = coach.get_profile(api, id)
+    except Exception as e:
+        click.echo(f"Failed to authenticate:\n{e}")
+        return
 
-        return response
-
-    profile = get_profile()
     if profile is None:
         return
 
-    if 'id' not in profile:
-        click.echo("Invalid API key, could not authenticate")
+    if 'bucket' not in profile:
+        click.echo(f"Failed to authenticate, invalid API/ID: {id}")
         return
 
     if not os.path.exists(config_folder):
@@ -314,7 +308,7 @@ def login(api, key, secret):
             'key': key,
             'secret': secret,
             'bucket': profile['bucket'],
-            'id': profile['id']
+            'id': id
         }
         creds_file.write(json.dumps(content))
         creds_file.close()
@@ -471,9 +465,10 @@ def predict(image_or_directory, model_name, root):
         click.echo(err)
 
 @click.group()
+@click.version_option()
 def cli():
-    f"""
-    💖 Welcome to the Coach CLI Utility v{setup.version}! 💖
+    """
+    💖 Welcome to the Coach CLI Utility v<version>! 💖
 
     Grab your API keys and view example usage at:
     https://coach.lkuich.com

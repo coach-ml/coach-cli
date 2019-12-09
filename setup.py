@@ -1,20 +1,18 @@
 import setuptools
 import sys
 
-version = '0.99'
-
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="coach-cli",
-    version=version,
+    version="1.00",
     py_modules=['main'],
     install_requires=[
         'Click',
         'boto3',
         'requests',
-        'coach-ml==0.16',
+        'coach-ml==0.18',
     ],
     entry_points='''
         [console_scripts]
