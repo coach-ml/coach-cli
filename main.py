@@ -468,7 +468,7 @@ def predict(image_or_directory, model_name, root):
 @click.version_option()
 def cli():
     """
-    💖 Welcome to the Coach CLI Utility v<version>! 💖
+    💖 Welcome to the Coach CLI Utility! 💖
 
     Grab your API keys and view example usage at:
     https://coach.lkuich.com
