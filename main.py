@@ -49,6 +49,27 @@ class CoachApi:
         result = list(bucket.objects.filter(Prefix=key))    
         return [os.path.split(o.key)[1] for o in result]
 
+    def validate_files(self, path):
+        result = True
+        walk = os.walk(path)
+        local_categories = next(walk)[1]
+
+        if len(local_categories) <= 0:
+            raise ValueError("Invalid directory structure, no category subdirectories")
+        
+        # Upload everything we have locally      
+        for subdir, dirs, files in walk:
+            subdir_path = os.path.split(subdir)
+            if subdir_path[0] != '':
+                click.echo(f"Validating {subdir_path[1]}...")
+            for file in files:
+                full_path = os.path.join(subdir, file)
+                valid = coach.validate_file(full_path)
+                if valid == False:
+                    click.echo(f'Invalid image found: {full_path}')
+                    result = False
+        return result
+
     def upload_local(self, path):
         model = os.path.split(path)[1]
         bucket = self.s3.Bucket(self.bucket)
@@ -60,8 +81,8 @@ class CoachApi:
         walk = os.walk(path)
         local_categories = next(walk)[1]
 
-        if len(local_categories) <= 0:
-            raise ValueError("Invalid directory structure, no category subdirectories")
+        if self.validate_files(path) == False:
+            raise ValueError("Corrupt images found, aborting sync")
         
         # Upload everything we have locally      
         for subdir, dirs, files in walk:
@@ -81,8 +102,8 @@ class CoachApi:
         walk = os.walk(path)
         local_categories = next(walk)[1]
 
-        if len(local_categories) <= 0:
-            raise ValueError("Invalid directory structure, no category subdirectories")
+        if self.validate_files(path) == False:
+            raise ValueError("Corrupt images found, aborting sync")
 
         # Delete remote categories if they don't exist locally
         remote_categories = self.__get_categories(model)

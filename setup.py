@@ -12,7 +12,7 @@ setuptools.setup(
         'Click',
         'boto3',
         'requests',
-        'coach-ml==0.18',
+        'coach-ml==0.22',
     ],
     entry_points='''
         [console_scripts]
