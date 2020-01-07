@@ -6,6 +6,7 @@ import requests
 
 from datetime import datetime
 import boto3
+from urllib.parse import unquote_plus
 
 from coach import *
 
@@ -39,7 +40,7 @@ class CoachApi:
         common_prefixes = result.get('CommonPrefixes')
         if common_prefixes is None:
             return []
-        return [os.path.split(o.get('Prefix').rstrip('/'))[1] for o in common_prefixes]
+        return [os.path.split(unquote_plus(o.get('Prefix')).rstrip('/'))[1] for o in common_prefixes]
 
     
     def __get_category_files(self, model, category):
@@ -125,7 +126,7 @@ class CoachApi:
 
         if commonPrefixes in response:
             for prefix in response[commonPrefixes]:
-                name = prefix['Prefix']
+                name = unquote_plus(prefix['Prefix'])
                 results.append(name)
             return results
         else:
@@ -165,15 +166,18 @@ class CoachApi:
                 os.mkdir(local_dir)
         
             _dir = dir_prefix.split(prefix, 1)[1].strip('/')
-            os.mkdir(os.path.join(local_dir, _dir))
+            
+            target_dir = os.path.join(local_dir, _dir)
+            if not os.path.exists(target_dir):
+                os.mkdir(target_dir)
 
             for file in bucket.objects.filter(Prefix=dir_prefix):
                 remote_filename = file.key
                 local_filename = remote_filename.split(prefix, 1)[1]
 
-                click.echo(f"{local_filename}")
-
-                bucket.download_file(remote_filename, os.path.join(path, training_data, local_filename))
+                if local_filename.split('/')[1] != '':
+                    click.echo(local_filename)
+                    bucket.download_file(remote_filename, os.path.join(path, training_data, local_filename))
 
     def train(self, model, steps, module):
         try:
@@ -394,7 +398,7 @@ def download(training_data, path):
     By default local data with the same name will be replaced.
     """
     path = path.rstrip('\\').rstrip('/')
-    click.confirm(f'This will OVERWRITE local data in {path}\nAre you sure you want to download {training_data}?', abort=True)
+    click.confirm(f'This will OVERWRITE local data in {path}/{training_data}\nAre you sure you want to download {training_data}?', abort=True)
     
     try:
         coach = get_coach()
