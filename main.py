@@ -87,12 +87,13 @@ class CoachApi:
         # Upload everything we have locally      
         for subdir, dirs, files in walk:
             subdir_path = os.path.split(subdir)
+            category = subdir_path[1];
             if subdir_path[0] != '':
-                click.echo(f"Syncing {subdir_path[1]}...")
+                click.echo(f"Syncing {category}...")
             for file in files:
                 full_path = os.path.join(subdir, file)
                 with open(full_path, 'rb') as data:
-                    bucket.put_object(Key=f'data/{model}/' + full_path[len(path)+1:], Body=data)
+                    bucket.put_object(Key=f'data/{model}/{category}/{file}', Body=data)
 
 
     def sync_local(self, path):
@@ -205,8 +206,8 @@ class CoachApi:
             url = f'{__API__}/new-job'
             response = requests.get(url, params={ "name": model, "steps": steps, "module": module }, headers={"X-Api-Key": self.api})
             response.raise_for_status()
-        except Exception:
-            raise ValueError("Failed to start training session, check your API key")
+        except Exception as e:
+            raise ValueError(f"Failed to start training session ({e})")
 
         return response.json()
 
@@ -215,8 +216,8 @@ class CoachApi:
             url = f'{__API__}/rm'
             response = requests.get(url, params={ "name": model_name }, headers={"X-Api-Key": self.api})
             response.raise_for_status()
-        except Exception:
-            raise ValueError("Failed to start training session, check your API key")
+        except Exception as e:
+            raise ValueError(f"Failed to delete ({e})")
 
         return response.json()
         
@@ -225,8 +226,8 @@ class CoachApi:
             url = f'{__API__}/status'
             response = requests.get(url, headers={"X-Api-Key": self.api})
             response.raise_for_status()
-        except Exception:
-            raise ValueError("Failed to check status, check your API key")
+        except Exception as e:
+            raise ValueError(f"Failed to check status ({e})")
         
         def pretty_print(status, name):
             if not name in status:
