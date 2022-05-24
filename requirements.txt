@@ -1,5 +1,5 @@
 boto3
 Click
 requests
-tensorflow==1.14
+tensorflow==2.6.4
 coach-ml
